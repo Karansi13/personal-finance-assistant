@@ -1,13 +1,10 @@
-
-
 'use client'
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { getInvestmentSuggestions } from '../../utils/ai'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/app/components/ui/card"
 import { TrendingUp, Loader } from 'lucide-react'
-import { Button } from '../components/ui/button'
 
 export default function InvestmentsPage() {
   const [suggestions, setSuggestions] = useState<string[]>([])
@@ -78,12 +75,12 @@ export default function InvestmentsPage() {
         </CardContent>
       </Card>
       
-      <Button
+      <button
         onClick={() => router.push('/')}
-        className="mt-4 px-4 py-2"
+        className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
       >
         Back to Home
-      </Button>
+      </button>
     </div>
   )
 }

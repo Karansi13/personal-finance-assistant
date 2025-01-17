@@ -3,7 +3,6 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 // Initialize the Google Generative AI client
 const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GENERATIVE_AI_API_KEY || '')
 
-// Get the generative model
 const model = genAI.getGenerativeModel({ model: 'gemini-pro' })
 
 async function generateAIResponse(prompt: string): Promise<string> {

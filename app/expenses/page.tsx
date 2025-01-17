@@ -1,20 +1,55 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import ExpenseForm from '../components/ExpenseForm'
 import ExpenseList from '../components/ExpenseList'
-import { Expense } from '../types/expense'
+import MonthSelector from '../components/MonthSelector'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
 import { DollarSign } from 'lucide-react'
-import { Button } from '../components/ui/button'
+import { Expense } from '../types/expense'
 
 export default function ExpensesPage() {
-  const [expenses, setExpenses] = useState<Expense[]>([])
+  const { data: session, status } = useSession()
   const router = useRouter()
+  const [expenses, setExpenses] = useState([])
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
 
-  const addExpense = (expense: Expense) => {
-    setExpenses([...expenses, expense])
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/')
+    } else if (status === 'authenticated') {
+      fetchExpenses()
+    }
+  }, [status, selectedMonth, selectedYear, router])
+
+  const fetchExpenses = async () => {
+    const res = await fetch(`/api/expenses?month=${selectedMonth}&year=${selectedYear}`)
+    console.log(res)
+    const data = await res.json()
+    console.log("daata",data)
+    setExpenses(data)
+  }
+
+  const addExpense = async (expense: Expense) => {
+    const res = await fetch('/api/expenses', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(expense),
+    })
+    if (res.ok) {
+      fetchExpenses()
+    }
+  }
+
+  if (status === 'loading') {
+    return <div>Loading...</div>
+  }
+
+  if (status === 'unauthenticated') {
+    return null // The useEffect will redirect
   }
 
   return (
@@ -31,15 +66,15 @@ export default function ExpensesPage() {
         </CardHeader>
         <CardContent>
           <ExpenseForm onAddExpense={addExpense} />
+          <MonthSelector 
+            selectedMonth={selectedMonth} 
+            selectedYear={selectedYear}
+            onMonthChange={setSelectedMonth}
+            onYearChange={setSelectedYear}
+          />
         </CardContent>
       </Card>
       <ExpenseList expenses={expenses} />
-      <Button
-        onClick={() => router.push('/')}
-        className="mt-8 px-4 py-2"
-      >
-        Back to Home
-      </Button>
     </div>
   )
 }

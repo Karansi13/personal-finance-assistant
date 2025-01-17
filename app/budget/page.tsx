@@ -1,36 +1,66 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import BudgetChart from '../components/BudgetChart'
-import { getBudgetSuggestions } from '../../utils/ai'
+import BudgetForm from '../components/BudgetForm'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
 import { PieChart } from 'lucide-react'
-import { Button } from '../components/ui/button'
+import { Expense } from '../types/expense'
 
 export default function BudgetPage() {
-  const [budget, setBudget] = useState<Record<string, number>>({})
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { data: session, status } = useSession()
   const router = useRouter()
+  const [budget, setBudget] = useState<Record<string, number>>({})
+  const [expenses, setExpenses] = useState<Record<string, number>>({})
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const fetchBudgetSuggestions = async () => {
-      try {
-        setIsLoading(true)
-        setError(null)
-        const suggestions = await getBudgetSuggestions()
-        setBudget(suggestions)
-      } catch (error) {
-        setError('Failed to load budget suggestions. Please try again later.')
-        console.error('Error fetching budget suggestions:', error)
-      } finally {
-        setIsLoading(false)
-      }
+    if (status === 'unauthenticated') {
+      router.push('/')
+    } else if (status === 'authenticated') {
+      fetchBudgetAndExpenses()
     }
+  }, [status, router])
 
-    fetchBudgetSuggestions()
-  }, [])
+  const fetchBudgetAndExpenses = async () => {
+    setIsLoading(true)
+    const [budgetRes, expensesRes] = await Promise.all([
+      fetch('/api/budget'),
+      fetch('/api/expenses')
+    ])
+    const budgetData = await budgetRes.json()
+    console.log(budgetData)
+    const expensesData = await expensesRes.json()
+    
+    setBudget(budgetData)
+    setExpenses(expensesData.reduce((acc: Record<string, number>, expense: Expense) => {
+      acc[expense.category] = (acc[expense.category] || 0) + expense.amount
+      return acc
+    }, {}))
+    setIsLoading(false)
+  }
+
+  const updateBudget = async (newBudget: Record<string, number>) => {
+    const res = await fetch('/api/budget', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newBudget),
+    })
+    if (res.ok) {
+      setBudget(newBudget)
+    }
+    console.log(budget)
+  }
+
+  if (status === 'loading' || isLoading) {
+    return <div>Loading...</div>
+  }
+
+  if (status === 'unauthenticated') {
+    return null // The useEffect will redirect
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -41,44 +71,14 @@ export default function BudgetPage() {
             Budget Planner
           </CardTitle>
           <CardDescription>
-            View AI-generated budget suggestions based on common financial guidelines. Use this as a starting point to create your personalized budget.
+            Set your monthly budget and track your spending against it. Use the AI-generated suggestions as a starting point.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading && (
-            <div className="flex justify-center items-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-            </div>
-          )}
-          
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative">
-              {error}
-            </div>
-          )}
-          
-          {!isLoading && !error && Object.keys(budget).length > 0 && (
-            <div>
-              <BudgetChart budget={budget} />
-              <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-                {Object.entries(budget).map(([category, percentage]) => (
-                  <div key={category} className="bg-white p-4 rounded-lg shadow border border-gray-200">
-                    <h3 className="font-semibold text-lg">{category}</h3>
-                    <p className="text-2xl font-bold text-blue-600">{percentage}%</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          <BudgetForm initialBudget={budget} onUpdateBudget={updateBudget} />
+          <BudgetChart budget={budget} expenses={expenses} />
         </CardContent>
       </Card>
-      
-      <Button
-        onClick={() => router.push('/')}
-        className="mt-4 px-4 py-2 "
-      >
-        Back to Home
-      </Button>
     </div>
   )
 }

@@ -1,26 +1,3 @@
-// import { Expense } from "./types"
-
-
-// interface ExpenseListProps {
-//   expenses: Expense[]
-// }
-
-// export default function ExpenseList({ expenses }: ExpenseListProps) {
-//   return (
-//     <div>
-//       <h2 className="text-2xl font-bold mb-4">Expense List</h2>
-//       <ul>
-//         {expenses.map((expense) => (
-//           <li key={expense.id} className="mb-2">
-//             {expense.description} - ${expense.amount.toFixed(2)} ({expense.category})
-//           </li>
-//         ))}
-//       </ul>
-//     </div>
-//   )
-// }
-
-
 import { Expense } from '../types/expense'
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { ShoppingBag, Home, Car, Utensils, Zap, Heart, Film, MoreHorizontal } from 'lucide-react'
@@ -41,6 +18,7 @@ const categoryIcons: { [key: string]: React.ReactNode } = {
 }
 
 export default function ExpenseList({ expenses }: ExpenseListProps) {
+  console.log(expenses)
   const groupedExpenses = expenses.reduce((acc, expense) => {
     if (!acc[expense.category]) {
       acc[expense.category] = []
