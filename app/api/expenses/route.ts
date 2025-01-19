@@ -17,10 +17,18 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const month = searchParams.get('month')
   const year = searchParams.get('year')
+  const search = searchParams.get('search') || ''
+  const category = searchParams.get('category') || ''
+  const filterMonth = searchParams.get('filterMonth')
 
   let query: any = { userId: new Types.ObjectId(session.user.id) }
 
-  if (month && year) {
+  if (filterMonth) {
+    query.date = {
+      $gte: new Date(parseInt(year!), parseInt(filterMonth!) - 1, 1),
+      $lt: new Date(parseInt(year!), parseInt(filterMonth!), 1)
+    }
+  } else if (month && year) {
     query.date = {
       $gte: new Date(parseInt(year), parseInt(month) - 1, 1),
       $lt: new Date(parseInt(year), parseInt(month), 1)
@@ -30,6 +38,14 @@ export async function GET(request: Request) {
       $gte: new Date(parseInt(year), 0, 1),
       $lt: new Date(parseInt(year) + 1, 0, 1)
     }
+  }
+
+  if (search) {
+    query.description = { $regex: search, $options: 'i' }
+  }
+
+  if (category && category.toLowerCase() !== 'all') {
+    query.category = { $regex: new RegExp(category, 'i') }
   }
 
   const expenses = await Expense.find(query).sort({ date: -1 })

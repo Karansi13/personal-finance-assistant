@@ -25,71 +25,37 @@ async function generateAIResponse(prompt: string): Promise<string> {
 export async function categorizeExpense(description: string): Promise<string> {
   const prompt = `You are a financial expense categorizer. Categorize the following expense into one of these categories: Housing, Transportation, Food, Utilities, Healthcare, Entertainment, Shopping, or Other. Only respond with the category name.
   Expense: "${description}"`
-  
+
   return generateAIResponse(prompt)
 }
 
-export async function getBudgetSuggestions(): Promise<Record<string, number>> {
-  const prompt = `Create a suggested monthly budget distribution across these categories: Housing, Transportation, Food, Utilities, Healthcare, Entertainment, Shopping, and Other. Respond only with a JSON object where keys are categories and values are suggested percentage allocations. The percentages should sum to 100. Format your response EXACTLY as a valid JSON object without any markdown formatting.
-  Example format: {"Housing": 30, "Transportation": 15, "Food": 15, "Utilities": 10, "Healthcare": 10, "Entertainment": 10, "Shopping": 5, "Other": 5}`
-  
+export async function getBudgetSuggestions(remainingBudget: number, overallBudget: number): Promise<Record<string, number>> {
+  const prompt = `As a financial advisor, provide suggestions for allocating the remaining budget of ₹${remainingBudget} out of the overall monthly budget of ₹${overallBudget}. Suggest allocations for these categories: Housing, Transportation, Food, Utilities, Healthcare, Entertainment, Shopping, and Savings. Respond with a JSON object where keys are categories and values are suggested amounts in rupees. Round all amounts to the nearest whole number. Do not include any additional text or formatting in your response, only the JSON object.`
+
+  const response = await generateAIResponse(prompt)
   try {
-    const response = await generateAIResponse(prompt)
     // Remove any potential markdown formatting
-    const jsonStr = response.replace(/^\`\`\`json\s*|\s*\`\`\`$/gm, '').trim()
-    
-    let budget: Record<string, number>
-    
-    try {
-      budget = JSON.parse(jsonStr)
-    } catch (parseError) {
-      console.error('Error parsing JSON:', parseError)
-      throw new Error('Invalid budget format')
-    }
-    
-    // Validate that we received an object with numeric values
-    if (typeof budget !== 'object' || Object.values(budget).some(value => typeof value !== 'number')) {
-      throw new Error('Invalid budget format')
-    }
-    
-    // Ensure all required categories are present
-    const requiredCategories = ['Housing', 'Transportation', 'Food', 'Utilities', 'Healthcare', 'Entertainment', 'Shopping', 'Other']
-    for (const category of requiredCategories) {
-      if (!(category in budget)) {
-        throw new Error(`Missing required category: ${category}`)
-      }
-    }
-    
-    return budget
+    const cleanedResponse = response.replace(/\`\`\`json\s*|\s*\`\`\`/g, '').trim()
+    const suggestions = JSON.parse(cleanedResponse)
+    return suggestions
   } catch (error) {
-    console.error('Error getting budget suggestions:', error)
-    // Provide a default budget if AI fails
-    return {
-      Housing: 30,
-      Transportation: 15,
-      Food: 15,
-      Utilities: 10,
-      Healthcare: 10,
-      Entertainment: 10,
-      Shopping: 5,
-      Other: 5
-    }
+    console.error('Error parsing AI suggestions:', error)
+    console.error('Raw response:', response)
+    throw new Error('Failed to parse AI suggestions')
   }
 }
 
 export async function getInvestmentSuggestions(): Promise<string[]> {
-  const prompt = `Generate 5 beginner-friendly investment suggestions. 
+  const prompt = `Generate 5 beginner-friendly investment suggestions for the Indian market. 
   Format your response EXACTLY as a valid JSON array of strings.
   Example format: ["suggestion 1", "suggestion 2", "suggestion 3"]
   Each suggestion should be clear and actionable.`
-  
+
   try {
     const response = await generateAIResponse(prompt)
-    // Clean the response to ensure it only contains the JSON array
     const jsonStr = response.trim().replace(/^\`\`\`json\s*|\s*\`\`\`$/g, '').trim()
     const suggestions = JSON.parse(jsonStr)
     
-    // Validate that we received an array of strings
     if (!Array.isArray(suggestions) || suggestions.some(item => typeof item !== 'string')) {
       throw new Error('Invalid response format')
     }
@@ -97,13 +63,12 @@ export async function getInvestmentSuggestions(): Promise<string[]> {
     return suggestions.slice(0, 5)
   } catch (error) {
     console.error('Error parsing investment suggestions:', error)
-    // Provide default suggestions if AI fails
     return [
-      "Start with a low-cost index fund that tracks the S&P 500",
-      "Open and max out a tax-advantaged retirement account (401k/IRA)",
-      "Build an emergency fund in a high-yield savings account",
-      "Consider low-cost ETFs for diversification",
-      "Begin with small, regular investments using dollar-cost averaging"
+      "Start with a low-cost index fund that tracks the Nifty 50",
+      "Open and max out a Public Provident Fund (PPF) account",
+      "Invest in government bonds through the RBI Retail Direct platform",
+      "Consider low-cost ETFs for diversification in the Indian market",
+      "Begin with small, regular investments in Systematic Investment Plans (SIPs)"
     ]
   }
 }
@@ -111,7 +76,7 @@ export async function getInvestmentSuggestions(): Promise<string[]> {
 export async function detectUnusualSpending(expenses: any[]): Promise<string | null> {
   const expensesJson = JSON.stringify(expenses)
   const prompt = `Analyze these expenses for unusual patterns: ${expensesJson}. If you find unusual patterns, describe them briefly. If not, respond exactly with "No unusual patterns detected."`
-  
+
   try {
     const response = await generateAIResponse(prompt)
     return response === "No unusual patterns detected." ? null : response

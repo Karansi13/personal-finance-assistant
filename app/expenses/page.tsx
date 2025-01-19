@@ -6,16 +6,21 @@ import { useRouter } from 'next/navigation'
 import ExpenseForm from '../components/ExpenseForm'
 import ExpenseList from '../components/ExpenseList'
 import MonthSelector from '../components/MonthSelector'
+import ExpenseFilter from '../components/ExpenseFilter' // Import the new component
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
-import { DollarSign } from 'lucide-react'
+import { IndianRupee } from 'lucide-react'
 import { Expense } from '../types/expense'
+import BudgetEditIcon from '../components/BudgetEditIcon'
 
 export default function ExpensesPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [expenses, setExpenses] = useState([])
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth()) // Update 1
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState('')
+  const [filterMonth, setFilterMonth] = useState<number | null>(null) // Update 2
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -25,11 +30,16 @@ export default function ExpensesPage() {
     }
   }, [status, selectedMonth, selectedYear, router])
 
+  useEffect(() => {
+    if (status === 'authenticated') {
+      fetchExpenses()
+    }
+  }, [status, selectedMonth, selectedYear, searchTerm, selectedCategory, filterMonth])
+
+
   const fetchExpenses = async () => {
-    const res = await fetch(`/api/expenses?month=${selectedMonth}&year=${selectedYear}`)
-    console.log(res)
+    const res = await fetch(`/api/expenses?month=${selectedMonth + 1}&year=${selectedYear}&search=${searchTerm}&category=${selectedCategory}&filterMonth=${filterMonth !== null ? filterMonth + 1 : ''}`) // Update 3
     const data = await res.json()
-    console.log("daata",data)
     setExpenses(data)
   }
 
@@ -44,8 +54,8 @@ export default function ExpensesPage() {
     }
   }
 
-  if (status === 'loading') {
-    return <div>Loading...</div>
+  if (status === 'loading' ) {
+    return <div className="flex justify-center items-center h-screen">Loading...</div>
   }
 
   if (status === 'unauthenticated') {
@@ -54,10 +64,11 @@ export default function ExpensesPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      <BudgetEditIcon />
       <Card className="mb-8">
         <CardHeader>
           <CardTitle className="text-2xl flex items-center">
-            <DollarSign className="mr-2" />
+            <IndianRupee className="mr-2" />
             Expense Tracker
           </CardTitle>
           <CardDescription>
@@ -74,6 +85,14 @@ export default function ExpensesPage() {
           />
         </CardContent>
       </Card>
+      <ExpenseFilter 
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        selectedCategory={selectedCategory}
+        setSelectedCategory={setSelectedCategory}
+        filterMonth={filterMonth}
+        setFilterMonth={setFilterMonth} // Update 4
+      />
       <ExpenseList expenses={expenses} />
     </div>
   )

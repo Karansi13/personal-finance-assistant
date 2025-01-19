@@ -29,6 +29,11 @@ export default function InvestmentsPage() {
 
     fetchInvestmentSuggestions()
   }, [])
+  
+  if (isLoading == true) {
+    return <div className="flex justify-center items-center h-screen">Loading...</div>
+  }
+
 
   return (
     <div className="container mx-auto px-4 py-8">
